@@ -1,0 +1,68 @@
+Create VPC with custom subnet:
+- Custom subnets
+- Single subnet with range 192.168.1.0/24 in region us-central-1
+
+Create firewall for bastion host:
+- Network should be the created VPC
+- Direction INGRESS
+- priority 1000
+- action ALLOW 
+- rules tcp:22
+- source-ranges 59.152.53.203/32 (Allows only ssh from your terminal!)
+- target-tags bastion-host (Important)
+
+Create firewall for private instance:
+- Network should be the VPC just created
+- Direction INGRESS
+- priority 1000
+- action ALLOW 
+- rules tcp:22
+- source-tags bastion-host (Important)
+- target-tags allow-ssh-private (Important)
+
+Launch bastion host instance:
+- region us-central1
+- zone us-central1-c
+- service account should have following permissions:
+    compute.instances.setMetadata
+    compute.projects.setCommonInstanceMetadata
+    compute.projects.get
+    compute.instances.get
+In Management, security, disks, networking, sole tenancy under networking tab:
+- network-tag bastion-host
+Edit the existing network interface:
+ - Network should be the created VPC
+ - Subnetwork should be the created subnet
+
+Launch private instance:
+- region us-central1
+- zone us-central1-c
+In Management, security, disks, networking, sole tenancy under networking tab:
+- network-tag allow-ssh-private
+Edit the existing network interface:
+ - Network should be the created VPC
+ - Subnetwork should be the created subnet
+ - External IP None
+
+On local terminal:
+local-terminal:~$ gcloud beta compute --project "pe-training" ssh --zone "us-central1-c" "<bastion-host-instance-name>"
+On bastion host:
+bastion-host:~$ gcloud beta compute --project "pe-training" ssh --zone "us-central1-c" "<private-instance-name>" --internal-ip
+
+Check for internet access:
+private-intance:~$ curl example.com (Should timeout)
+
+Set up Cloud NAT
+1. Go to the Cloud NAT page in the Google Cloud Platform Console.
+2. Go to the Cloud NAT page
+3. Click Get started or Create NAT gateway.
+4. Enter a Gateway name.
+5. Set the VPC network to above VPC.
+6. Set the Region to us-central1.
+7. Under Cloud Router, select Create new router.
+   - Enter a Name for NAT router.
+   - Click Create.
+8. Click Create.
+
+Check for internet access:
+private-intance:~$ curl example.com (Should show HTML DOM)

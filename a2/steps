@@ -1,0 +1,153 @@
+Adapted from https://cloud.google.com/monitoring/quickstart-aws
+
+Creating a single workspace for GCP and AWS projects
+
+Create a GCP project (Best practice is to create a separate project for monitoring multiple projects)
+- In the GCP Console, go to New Project.
+- In the Project Name field, enter the name you want.
+- Click Create.
+
+
+Create a Workspace in the monitoring project
+- Go to GCP Console
+- In the menu bar, click the drop-down list next to the Google Cloud Platform and select your GCP project for monitoring.
+  Click Monitoring.
+- If the Add your project to a Workspace dialog is displayed, create a new Workspace by selecting your GCP project 
+  under New Workspace and then clicking Add.
+- The Add your project to a Workspace dialog is displayed only when you have at least one existing Workspace available to you. 
+- The Workspaces listed under Existing Workspace are Workspaces you've created or Workspaces for GCP projects where you have 
+  editorial permission. Using this dialog, you can choose between creating a new Workspace and adding your project to an 
+  existing Workspace.
+- Next, Monitoring creates a new Workspace and adds your GCP project to the Workspace. During Workspace creation, 
+  Monitoring proceeds through the following phases:
+  - Building your Workspace
+  - Enabling Stackdriver APIs
+  - We're still collecting data for your new Workspace
+- These phases might take several minutes to complete. When this process is complete, the Stackdriver Monitoring console 
+  displays the Monitoring Overview pane and a welcome message
+- You can add your GCP projects to the workspace
+
+
+Steps to add an AWS account to the workspace
+
+Get your account and external IDs
+- Go to the Stackdriver Monitoring console
+- Next to the Stackdriver logo in the title bar, a Workspace name is displayed. If this isn't your monitoring project, 
+  click on the drop-down list and select it.
+- At the bottom of the Workspace menu, click Workspace Settings.
+- Under Settings, click Monitored accounts.
+- Click Add AWS account.
+- Record the Account ID and External ID. You need this data to create your AWS Role.
+- Click Cancel. You add your AWS account after you create your AWS role.
+
+
+Creating an AWS role
+- Log into your AWS IAM console and click Roles in the left-side menu.
+  Click Create New Role and do the following:
+  - For the Role type, select Another AWS account.
+  - In the Account ID field, enter the account ID provided by Stackdriver.
+  - Select the Require external ID checkbox.
+  - In the External ID field, enter the external ID provided by Stackdriver.
+  - Don't select Require MFA.
+  - Click Next: Permissions.
+- From the Policy name drop-down list, select ReadOnlyAccess:
+- Click Next: Review and fill in or verify the following information:
+  - In the Role name field, enter a name such as GoogleStackdriver.
+  - In the Role description field, enter anything you wish.
+  - In the Trusted entities field, verify it's the Account ID you entered earlier.
+  - In the Policies field, verify the value is ReadOnlyAccess.
+- In the AWS IAM page, click Create Role.
+- On the Summary page, copy the Role ARN string so that you can give it to Stackdriver. 
+- If you don't see the summary, click the name of your role (for example, GoogleStackdriver) in the list of AWS roles.
+
+
+Connecting an AWS Account
+- Go to the Stackdriver Monitoring console
+- From the Workspace menu at the top of the page, select your Workspace.
+- At the bottom of the Workspace menu, click Workspace Settings.
+- Under Settings, click Monitored accounts.
+- Click Add AWS account. Enter the Account ID and External ID from when you created a Workspace.
+- Enter the following information in the form:
+  - In the Role ARN field, enter your Role ARN from Creating an AWS role or follow the instructions on 
+    the Add AWS account page to create the role.
+  - In the Description of account field, enter a short description of your AWS account. The first word 
+    or two is used to create a new project ID.
+  - Click Add AWS account. In a moment, the connection is confirmed.
+
+
+AWS connector projects
+- When you connect to an AWS account, Monitoring creates an AWS connector project for you. 
+- The Monitored accounts page in your Workspace settings now includes the ID for this project:
+  - Your AWS account description [YOUR_AWS_ACCOUNT_NUMBER]
+  - Connected to [CONNECTOR_PROJECT_ID]
+Where:
+  - [YOUR_AWS_ACCOUNT_NUMBER] represents the account number for your AWS account.
+  - [CONNECTOR_PROJECT_ID] represents the connector project where you receive logs and metrics from your AWS account 
+    and where you set up authorization for agents and other AWS applications that need to access GCP.
+  - The connector project's ID always begins with aws-, and the project's name always begins with AWS Link
+
+
+Authorizing AWS applications
+- You must perform the following steps if you do any of the following:
+  - Run any of the Stackdriver agents on AWS VM instances for advanced monitoring.
+  - Use any GCP services from AWS applications.
+- To authorize applications running on AWS to access GCP services, you give them access to a GCP service account 
+  that has suitable GCP IAM roles.
+- A single service account can authorize multiple AWS VM instances and applications in the same AWS account, or you 
+  can create multiple service accounts.
+
+
+Create a service account
+- To create the service account, go to the IAM & Admin > Service accounts page for your connector project:
+- Go to the Service Accounts page
+- Select the AWS connector project (named AWS Link...) for your AWS account.
+- Your connector project likely has no service accounts, so you are asked to create one. 
+- Click Create service account and enter the following information:
+  - In the Service account name field, enter Stackdriver agent authorization.
+  - In the Role field, add both of the following values:
+    - Monitoring > Monitoring Metric Writer
+    - Logging > Logs Writer
+  - Select the Furnish a new private key checkbox.
+  - For Key type, click JSON.
+  - Clear the Enable G Suite Domain-wide Delegation checkbox.
+  - Create service account
+- Click Create. The service account's private-key file is downloaded to your workstation with a name 
+  such as Downloads/[PROJECT_NAME]-[KEY_ID].json.
+  Where:
+  - [PROJECT_NAME] represents the name of your GCP project.
+  - [KEY_ID] represents the generated private key.
+- To make the following instructions simpler, save the location of the credentials file in the variable CREDS 
+  on your workstation: CREDS="Downloads/[PROJECT_NAME]-[KEY_ID].json"
+
+
+Add a service account to a VM instance
+- From your workstation, copy the Stackdriver private-key credentials file to your AWS EC2 instance and save it in 
+  a file named temp.json. In the scp command, specify the path to key.pem, your AWS SSH key pair file, and provide 
+  your AWS credentials:
+    KEY="/path/to/key.pem"
+    scp -i "$KEY" "$CREDS" AWS_USERNAME@AWS_HOSTNAME:temp.json
+- On your EC2 instance, move the credentials to /etc/google/auth/application_default_credentials.json:
+    GOOGLE_APPLICATION_CREDENTIALS="/etc/google/auth/application_default_credentials.json"
+    sudo mkdir -p $(dirname "$GOOGLE_APPLICATION_CREDENTIALS")
+    sudo mv "$HOME/temp.json" "$GOOGLE_APPLICATION_CREDENTIALS"
+- Note: /etc/google/auth/application_default_credentials.json is where the monitoring and logging agents look for 
+  the private key.
+- (Optional): Restrict access to the private-key credentials for the service account. For example:
+    sudo chown root:root "$GOOGLE_APPLICATION_CREDENTIALS"
+    sudo chmod 0400 "$GOOGLE_APPLICATION_CREDENTIALS"
+- Make sure the environment variable GOOGLE_APPLICATION_CREDENTIALS is visible to the agents and other applications 
+  that are authorized to use GCP. The environment variable name is understood by the standard GCP client libraries.
+
+Install the Stackdriver Monitoring and Logging agents
+- Run the following commands on your EC2 instance:
+    curl -sSO https://dl.google.com/cloudagents/install-monitoring-agent.sh
+    sudo bash install-monitoring-agent.sh
+    curl -sSO https://dl.google.com/cloudagents/install-logging-agent.sh
+    sudo bash install-logging-agent.sh --structured
+- Verify that the agents are running.
+    ps ax | grep fluentd
+    ps ax | grep collectd
+  The expected output should be similar to the following:
+    [PROCESS_ID] ?    Sl   0:00 /opt/google-fluentd/embedded/bin/ruby /usr/sbin/google-fluentd ...
+    [PROCESS_ID] ?    Ssl  0:00 /opt/stackdriver/collectd/sbin/stackdriver-collectd ...
+

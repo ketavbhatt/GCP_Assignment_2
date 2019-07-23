@@ -1,0 +1,16 @@
+Equivalent gcloud commands, except for creating NAT
+
+	gcloud compute --project=pe-training networks create kaustubh-pe-a2-q1 --description="VPC for assignment 2, question 1" --subnet-mode=custom
+
+	gcloud compute --project=pe-training networks subnets create us-central1-subnet1 --network=kaustubh-pe-a2-q1 --region=us-central1 --range=192.168.1.0/24
+
+	gcloud compute --project=pe-training firewall-rules create kaustubh-allow-ssh --description="Allow ssh to bastion host" --direction=INGRESS --priority=1000 --network=kaustubh-pe-a2-q1 --action=ALLOW --rules=tcp:22 --source-ranges=59.152.53.203/32 --target-tags=bastion-host
+
+	gcloud compute --project=pe-training firewall-rules create kaustubh-allow-ssh-private --description="Allow ssh to private instance from bastion host" --direction=INGRESS --priority=1000 --network=kaustubh-pe-a2-q1 --action=ALLOW --rules=tcp:22 --source-tags=bastion-host --target-tags=allow-ssh-private
+
+	gcloud compute --project=pe-training instances create kaustubh-bastion-host --zone=us-central1-c --machine-type=f1-micro --subnet=us-central1-subnet1 --network-tier=PREMIUM --metadata=office-time=mumbai-11,email=kaustubh.khavnekar@quantiphi.com --maintenance-policy=MIGRATE --service-account=912623308461-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --tags=bastion-host --image=ubuntu-1804-bionic-v20190628 --image-project=ubuntu-os-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=kaustubh-bastion-host
+
+	gcloud compute --project=pe-training instances create kaustubh-private-instance --zone=us-central1-c --machine-type=f1-micro --subnet=us-central1-subnet1 --no-address --metadata=^,@^office-time=mumbai-11,@email=kaustubh.khavnekar@quantiphi.com --maintenance-policy=MIGRATE --service-account=912623308461-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --tags=allow-ssh-private --image=ubuntu-1804-bionic-v20190628 --image-project=ubuntu-os-cloud --boot-disk-size=10GB --boot-disk-type=pd-standard
+
+	gcloud beta compute --project "pe-training" ssh --zone "us-central1-c" "kaustubh-bastion-host"
+	gcloud beta compute --project "pe-training" ssh --zone "us-central1-c" "kaustubh-private-instance" --internal-ip

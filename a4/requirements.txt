@@ -1,0 +1,4 @@
+# Function dependencies, for example:
+# package>=version
+google-cloud-vision==0.38.0
+google-cloud-datastore==1.8.0

@@ -1,0 +1,30 @@
+Instance configuration:
+
+- Allow http traffic
+
+- startup script:
+#!/bin/bash
+sudo apt update
+sudo apt install -y apache2
+curl "http://metadata.google.internal/computeMetadata/v1/instance/attributes/index" -H "Metadata-Flavor:Google" | sudo tee /var/www/html/index.html > /dev/null
+
+- custom metadata:
+key="index"
+value="<!DOCTYPE html>
+<html>
+<head>
+	<title>Welcome</title>
+</head>
+<body>
+Welcome Kaustubh Khavnekar!
+</body>
+</html>"
+
+
+
+After some time, visit the external IP of your instance to check whether the apache server was successfully installed
+
+local-terminal:~$ gcloud compute instances stop --zone="us-east1-b" kaustubh-pe-training
+local-terminal:~$ gcloud compute instances start --zone="us-east1-b" kaustubh-pe-training
+
+To view server logs, go to the instance page, and click on stackdriver logging
